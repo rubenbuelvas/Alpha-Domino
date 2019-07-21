@@ -62,12 +62,12 @@ def play(agents, env, verbose=False):
 	first_tile_pos = 0
 	for i in range(len(agents)):
 		for j in range(len(agents[i].hand)):
-			if agents[i].hand[j, 0] > first_tile[0] and agents[i].hand[j, 0] == agents[i].hand[j, 1]:
+			if agents[i].hand[j][0] > first_tile[0] and agents[i].hand[j][0] == agents[i].hand[j][1]:
 				first_tile = agents[i].hand[j]
 				first_agent = i
 				first_tile_pos = j
 	if first_tile != [-1, -1]:
-		
+		pass
 
 	while(winner == -1):
 		turn += 1
