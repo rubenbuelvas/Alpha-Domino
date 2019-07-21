@@ -19,7 +19,10 @@ class Environment():
 			self.hand_sizes[i] = len(self.agents[i].hand)
 
 	def get_observation(self):
-		return -1
+		observation = []
+		observation.append(self.table)
+		observation.append(self.hand_sizes)
+		return observation
 
 	def get_winner(self):
 		self.recalculate_hand_sizes()
@@ -35,8 +38,16 @@ class RandomAgent():
 		self.hand = []
 
 	def act(self, observation):
-		tile = self.hand.pop(random.randrange(len(self.hand)))
-		return tile
+		play = 0
+		for i in range(10):
+			pos = random.randrange(len(self.hand))
+			tile = self.hand.pop(pos)
+			play = playable(observation[0], tile)
+			if play != -1:
+				break
+		else:
+			play = 0
+		return play
 
 
 def generate_tiles(max_value=6):
@@ -52,7 +63,22 @@ def turn_tile(tile):
 	new_tile = [tile[1], tile[0]]
 	return new_tile
 
-	
+
+def playable_tile(table, tile):
+	playable = -1
+	t_left = table[0]
+	t_right = table[-1]
+	if t_left[0] == tile[0]:
+		playable = [tile, 0]
+	elif t_left[0] == tile[1]:
+		playable = [turn_tile(tile), 0]
+	elif t_right[1] == tile[0]: 
+		playable = [turn_tile(tile), 1]
+	elif t_right[1] == tile[1]:
+		playable = [tile, 1]
+	return playable
+
+
 def play(agents, env, verbose=False):
 	winner = env.get_winner()
 	turn = 0
@@ -62,17 +88,31 @@ def play(agents, env, verbose=False):
 	first_tile_pos = 0
 	for i in range(len(agents)):
 		for j in range(len(agents[i].hand)):
-			if agents[i].hand[j, 0] > first_tile[0] and agents[i].hand[j, 0] == agents[i].hand[j, 1]:
+			if agents[i].hand[j][0] > first_tile[0] and agents[i].hand[j][0] == agents[i].hand[j][1]:
 				first_tile = agents[i].hand[j]
 				first_agent = i
 				first_tile_pos = j
 	if first_tile != [-1, -1]:
-		
+		turn += 1
+		for i in range(first_agent, len(agents)):
+			played_tile = agent.act(env.get_observation())
+			winner = env.get_winner()
+			if winner != -1:
+				break
+	else:
+		played_tile = pile.pop()
 
 	while(winner == -1):
 		turn += 1
 		for agent in agents:
 			played_tile = agent.act(env.get_observation())
+			if played_tile != 0:
+				if(played_tile[1] == 0):
+					env.table.insert(0, played_tile[0])
+				elif(played_tile[1] == 1):
+					env.table.append(played_tile[0])
+				else:
+					print("Something went wrong")
 			winner = env.get_winner()
 			if winner != -1:
 				break
