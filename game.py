@@ -1,9 +1,11 @@
 import numpy as np
 import random
+import copy
 
 class Environment():
 	
 	def __init__(self, agents, n_players=4, tiles_per_player=7):
+		self.tiles_per_player = tiles_per_player
 		self.n_players = n_players
 		self.agents = agents
 		self.pile = generate_tiles()
@@ -14,10 +16,11 @@ class Environment():
 				self.hand_sizes.append(len(agent.hand))
 		self.table = []
 
+	"""
 	def recalculate_hand_sizes(self):
 		for i in range(self.n_players):
 			self.hand_sizes[i] = len(self.agents[i].hand)
-
+	"""
 	def get_observation(self):
 		observation = []
 		observation.append(self.table)
@@ -25,11 +28,23 @@ class Environment():
 		return observation
 
 	def get_winner(self):
-		self.recalculate_hand_sizes()
 		winner = -1
-		for i in range(len(self.hand_sizes)):
-			if self.hand_sizes[i] == 0:
+		for i in range(len(agents)):
+			if len(agents[i].hand) == 0:
 				winner = i
+		return winner
+
+	def get_winner_2(self):
+		print("Overtime")
+		winner = -1
+		min_ = self.tiles_per_player
+		for i in range(len(agents)):
+			if len(agents[i].hand) < min_:
+				min_ = len(agents[i].hand)
+				winner = i
+			elif len(agents[i].hand) == min_:
+				winner = -1
+				break
 		return winner
 
 
@@ -40,11 +55,11 @@ class RandomAgent():
 	def act(self, observation):
 		play = 0
 		for i in range(10):
-			print(len(self.hand))
 			pos = random.randrange(len(self.hand))
-			tile = self.hand.pop(pos)
+			tile = self.hand[pos]
 			play = playable_tile(observation[0], tile)
 			if play != -1:
+				self.hand.pop(pos)
 				break
 		else:
 			play = 0
@@ -61,7 +76,7 @@ def generate_tiles(max_value=6):
 
 
 def turn_tile(tile):
-	new_tile = [tile[1], tile[0]]
+	new_tile = [copy.copy(tile[1]), copy.copy(tile[0])]
 	return new_tile
 
 
@@ -69,13 +84,13 @@ def playable_tile(table, tile):
 	playable = -1
 	t_left = table[0]
 	t_right = table[-1]
-	if t_left[0] == tile[0]:
+	if t_left[0] == tile[1]:
 		playable = [tile, 0]
-	elif t_left[0] == tile[1]:
+	elif t_left[0] == tile[0]:
 		playable = [turn_tile(tile), 0]
-	elif t_right[1] == tile[0]: 
+	elif t_right[1] == tile[1]: 
 		playable = [turn_tile(tile), 1]
-	elif t_right[1] == tile[1]:
+	elif t_right[1] == tile[0]:
 		playable = [tile, 1]
 	return playable
 
@@ -83,7 +98,7 @@ def playable_tile(table, tile):
 def play(agents, env, verbose=False):
 	winner = env.get_winner()
 	turn = 0
-
+	passed_count = 0
 	first_tile = [-1, -1]
 	first_agent = 0
 	first_tile_pos = 0
@@ -97,7 +112,21 @@ def play(agents, env, verbose=False):
 		env.table.append(agents[first_agent].hand.pop(first_tile_pos))
 		turn += 1
 		for i in range(first_agent, len(agents)):
+			print("-------------------------------")
+			print(f"Table: {env.table}")
+			print(f"Player {i} hand: {agents[i].hand}")
 			played_tile = agents[i].act(env.get_observation())
+			if played_tile != 0:
+				print(f"Player {i} played {played_tile}")
+				if(played_tile[1] == 0):
+					env.table.insert(0, played_tile[0])
+				elif(played_tile[1] == 1):
+					env.table.append(played_tile[0])
+				else:
+					print("Something went wrong")
+			else:
+				passed_count += 1
+				print(f"Player {i} passed")
 			winner = env.get_winner()
 			if winner != -1:
 				break
@@ -105,28 +134,44 @@ def play(agents, env, verbose=False):
 		played_tile = pile.pop()
 		pass
 	while(winner == -1):
-		print(env.table)
+		if winner != -1:
+			break
 		turn += 1
-		for agent in agents:
-			played_tile = agent.act(env.get_observation())
+		if passed_count == len(agents):
+			winner = env.get_winner_2()
+			break
+		passed_count = 0
+		for i in range(len(agents)):
+			print("-------------------------------")
+			print(f"Table: {env.table}")
+			print(f"Player {i} hand: {agents[i].hand}")
+			played_tile = agents[i].act(env.get_observation())
 			if played_tile != 0:
+				print(f"Player {i} played {played_tile}")
 				if(played_tile[1] == 0):
 					env.table.insert(0, played_tile[0])
 				elif(played_tile[1] == 1):
 					env.table.append(played_tile[0])
 				else:
 					print("Something went wrong")
+			else:
+				passed_count += 1
+				print(f"Player {i} passed")
 			winner = env.get_winner()
 			if winner != -1:
 				break
-
-	print(f"Player {winner} won!")
+	if winner == -1:
+		print()
+		print("Tie!")
+	else:
+		print()
+		print(f"Player {winner} won!")
 		
 
 agents = []
 for i in range(4):
 	agents.append(RandomAgent())
 
-env = Environment(agents)
-
-play(agents, env, verbose=True)
+for i in range(100):
+	env = Environment(agents)
+	play(agents, env, verbose=True)
