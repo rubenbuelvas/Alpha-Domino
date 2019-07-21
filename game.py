@@ -9,21 +9,20 @@ class Environment():
 		self.n_players = n_players
 		self.agents = agents
 		self.pile = generate_tiles()
-		self.hand_sizes = []
 		for agent in agents:
 			for i in range(tiles_per_player):
 				agent.hand.append(self.pile.pop())
 				self.hand_sizes.append(len(agent.hand))
 		self.table = []
 
-	"""
 	def recalculate_hand_sizes(self):
 		for i in range(self.n_players):
 			self.hand_sizes[i] = len(self.agents[i].hand)
-	"""
+
 	def get_observation(self):
 		observation = []
 		observation.append(self.table)
+		self.recalculate_hand_sizes()
 		observation.append(self.hand_sizes)
 		return observation
 
