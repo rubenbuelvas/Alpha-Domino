@@ -3,7 +3,7 @@ import random
 
 class Environment():
 	
-	def __init__(self, agents, n_players=4, tiles_per_player=5):
+	def __init__(self, agents, n_players=4, tiles_per_player=7):
 		self.n_players = n_players
 		self.agents = agents
 		self.pile = generate_tiles()
@@ -40,9 +40,10 @@ class RandomAgent():
 	def act(self, observation):
 		play = 0
 		for i in range(10):
+			print(len(self.hand))
 			pos = random.randrange(len(self.hand))
 			tile = self.hand.pop(pos)
-			play = playable(observation[0], tile)
+			play = playable_tile(observation[0], tile)
 			if play != -1:
 				break
 		else:
@@ -93,16 +94,18 @@ def play(agents, env, verbose=False):
 				first_agent = i
 				first_tile_pos = j
 	if first_tile != [-1, -1]:
+		env.table.append(agents[first_agent].hand.pop(first_tile_pos))
 		turn += 1
 		for i in range(first_agent, len(agents)):
-			played_tile = agent.act(env.get_observation())
+			played_tile = agents[i].act(env.get_observation())
 			winner = env.get_winner()
 			if winner != -1:
 				break
 	else:
 		played_tile = pile.pop()
-
+		pass
 	while(winner == -1):
+		print(env.table)
 		turn += 1
 		for agent in agents:
 			played_tile = agent.act(env.get_observation())
