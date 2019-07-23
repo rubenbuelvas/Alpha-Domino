@@ -286,7 +286,7 @@ def playable_tile(table, tile):
 	return playable
 
 
-def play(agents, env, verbose=False, num_episodes=1):
+def play(agents, env, verbose=False):
 	winner = env.get_winner()
 	turn = 0
 	passed_count = 0
