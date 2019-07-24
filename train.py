@@ -28,24 +28,10 @@ def create_dqn_model(env, num_last_frames):
     model = Sequential()
 
     # Convolutions.
-    model.add(Conv1D(
-        16,
-        kernel_size=(1),
-        strides=(1),
-        data_format='channels_first',
-        input_shape=(env.observation_shape(0), 1)
-    ))
-    model.add(Activation('relu'))
-    model.add(Conv1D(
-        32,
-        kernel_size=(1),
-        strides=(1),
-        data_format='channels_first'
-    ))
+    model.add(Dense(32, input_shape=(1,)))
     model.add(Activation('relu'))
 
     # Dense layers.
-    model.add(Flatten())
     model.add(Dense(256))
     model.add(Activation('relu'))
     model.add(Dense(29))

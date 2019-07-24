@@ -46,7 +46,6 @@ class DeepQNetworkAgent():
             num_last_frames (int): the number of last frames the agent will consider.
             memory_size (int): memory size limit for experience replay (-1 for unlimited). 
         """
-        assert model.input_shape[1] == num_last_frames, 'Model input shape should be (num_frames, grid_size, grid_size)'
         assert len(model.output_shape) == 2, 'Model output shape should be (num_samples, num_actions)'
         self.hand = []
         self.hand_ids = []
@@ -54,7 +53,7 @@ class DeepQNetworkAgent():
         self.last_pos_played = -1
         self.model = model
         self.num_last_frames = num_last_frames
-        self.memory = ExperienceReplay((num_last_frames,) + model.input_shape[-2:], model.output_shape[-1], memory_size)
+        self.memory = 0
         #self.frames = None
 
     def begin_episode(self):
@@ -136,7 +135,7 @@ class DeepQNetworkAgent():
                     else:
                         # Exploit: take the best known action for this state.
                         q = self.model.predict(state)
-                        action = np.argmax(q[0])
+                        action = q[0]
 
                     # Act on the environment.
                     env.choose_action(action, 0)
@@ -147,19 +146,7 @@ class DeepQNetworkAgent():
                     state_next = self.timestep.observation
                     game_over = timestep.is_episode_end
                     experience_item = [state, action, reward, state_next, game_over]
-                    self.memory.remember(*experience_item)
-                    state = state_next
-
-                    # Sample a random batch from experience.
-                    batch = self.memory.get_batch(
-                        model=self.model,
-                        batch_size=batch_size,
-                        discount_factor=discount_factor
-                    )
-                    # Learn on the batch.
-                    if batch:
-                        inputs, targets = batch
-                        loss += float(self.model.train_on_batch(inputs, targets))
+                    #arn on the
                 else:
 
                     actions = env.agents[i].act(timestep.observation, timestep.reward)
@@ -184,7 +171,7 @@ class DeepQNetworkAgent():
                         else:
                             # Exploit: take the best known action for this state.
                             q = self.model.predict(state)
-                            action = np.argmax(q[0])
+                            action = q[0]
 
                         # Act on the environment.
                         env.choose_action(action, 0)
@@ -195,22 +182,15 @@ class DeepQNetworkAgent():
                         state_next = self.timestep.observation
                         game_over = timestep.is_game_over
                         experience_item = [state, action, reward, state_next, game_over]
-                        self.memory.remember(*experience_item)
+                        #self.memory.remember(*experience_item)
                         state = state_next
 
                         # Sample a random batch from experience.
-                        batch = self.memory.get_batch(
-                            model=self.model,
-                            batch_size=batch_size,
-                            discount_factor=discount_factor
-                        )
-                        # Learn on the batch.
-                        if batch:
-                            inputs, targets = batch
-                            loss += float(self.model.train_on_batch(inputs, targets))
+                        
+                        #
                     else:
 
-                        actions = agents[i].act(timestep.observation, timestep.reward)
+                        actions = env.agents[i].act(timestep.observation, timestep.reward)
                         action = env.choose_action(actions, i)
 
                         timestep = env.timestep(i)
@@ -234,82 +214,8 @@ class DeepQNetworkAgent():
         self.model.save('dqn-final.model')
 
     def act(self, observation, reward):
-        state = self.observation
+        state = observation
         q = self.model.predict(state)[0]
         return q
 
 
-class ExperienceReplay():
-    """ Represents the experience replay memory that can be randomly sampled. """
-
-    def __init__(self, input_shape, num_actions, memory_size=100):
-        """
-        Create a new instance of experience replay memory.
-        
-        Args:
-            input_shape: the shape of the agent state.
-            num_actions: the number of actions allowed in the environment.
-            memory_size: memory size limit (-1 for unlimited).
-        """
-        self.memory = collections.deque()
-        self.input_shape = input_shape
-        self.num_actions = num_actions
-        self.memory_size = memory_size
-
-    def reset(self):
-        """ Erase the experience replay memory. """
-        self.memory = collections.deque()
-
-    def remember(self, state, action, reward, state_next, is_episode_end):
-        """
-        Store a new piece of experience into the replay memory.
-        
-        Args:
-            state: state observed at the previous step.
-            action: action taken at the previous step.
-            reward: reward received at the beginning of the current step.
-            state_next: state observed at the current step. 
-            is_episode_end: whether the episode has ended with the current step.
-        """
-        memory_item = np.concatenate([
-            state,
-            np.array(action).flatten(),
-            np.array(reward).flatten(),
-            state_next,
-            1 * np.array(is_episode_end).flatten()
-        ])
-        self.memory.append(memory_item)
-        if 0 < self.memory_size < len(self.memory):
-            self.memory.popleft()
-
-    def get_batch(self, model, batch_size, discount_factor=0.9):
-        """ Sample a batch from experience replay. """
-
-        batch_size = min(len(self.memory), batch_size)
-        experience = np.array(random.sample(self.memory, batch_size))
-        input_dim = np.prod(self.input_shape)
-
-        # Extract [S, a, r, S', end] from experience.
-        states = experience[:, 0:input_dim]
-        actions = experience[:, input_dim]
-        rewards = experience[:, input_dim + 1]
-        states_next = experience[:, input_dim + 2:2 * input_dim + 2]
-        episode_ends = experience[:, 2 * input_dim + 2]
-
-        # Reshape to match the batch structure.
-        states = states.reshape((batch_size, ) + self.input_shape)
-        actions = np.cast['int'](actions)
-        rewards = rewards.repeat(self.num_actions).reshape((batch_size, self.num_actions))
-        states_next = states_next.reshape((batch_size, ) + self.input_shape)
-        episode_ends = episode_ends.repeat(self.num_actions).reshape((batch_size, self.num_actions))
-
-        # Predict future state-action values.
-        X = np.concatenate([states, states_next], axis=0)
-        y = model.predict(X)
-        Q_next = np.max(y[batch_size:], axis=1).repeat(self.num_actions).reshape((batch_size, self.num_actions))
-
-        delta = np.zeros((batch_size, self.num_actions))
-        delta[np.arange(batch_size), actions] = 1
-
-        targets = (1 - delta) * y[:batch_size] + delta * (rewards + discount_factor * (1 - episode_ends) * Q_next)
-        return states, targets

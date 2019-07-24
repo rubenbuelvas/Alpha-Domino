@@ -7,6 +7,12 @@ import os
 from environment import *
 from agents import *
 
+def load_model(filename):
+    """ Load a pre-trained agent model. """
+    from keras.models import load_model
+    return load_model(filename)
+
+
 def play(env, agents, num_episodes=1, verbose=True):
 
     winner = -1
@@ -72,7 +78,7 @@ else:
     os.system("clear")
 
 agents = []
-agents.append(DeepQNetworkAgent())
+agents.append(DeepQNetworkAgent(model=load_model("dqn-final.model")))
 agents.append(RandomAgent())
 agents.append(RandomAgent())
 agents.append(RandomAgent())
