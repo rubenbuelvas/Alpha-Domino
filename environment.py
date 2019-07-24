@@ -12,37 +12,29 @@ class Environment():
         self.hand_sizes = []
         self.n_players = n_players
         self.agents = agents
-        self.tiles_ids = {(-1, -1): 0}
-        self.ids_tiles = {0: (-1, -1)}
+        self.tiles_ids = {(-2, -2): -1, (-1, -1): 0}
+        self.ids_tiles = {-1: (-2, -2), 0: (-1, -1)}
         self.pile = self.generate_tiles()
         self.is_game_over = False
         self.first_agent = -1
         self.turns_passed = 0
         self.current_action = [(-1, -1), -1]
         self.timestep_index = 0
-        for agent in agents:
-            for i in range(tiles_per_player):
-                agent.hand.append(self.pile[0])
-                agent.hand_ids.append(self.tiles_ids[tuple(self.pile.pop())])
-                self.hand_sizes.append(len(agent.hand))
         self.table = []
 
     def new_episode(self):
         self.is_game_over = False
         for agent in self.agents:
             agent.hand = []
+            agent.hand_ids = []
         self.pile = self.generate_tiles()
         for agent in self.agents:
             for i in range(self.tiles_per_player):
-                agent.hand.append(self.pile.pop())
+                agent.hand_ids.append(self.tiles_ids[tuple(self.pile.pop())])
+            agent.hand_ids.sort()
+            for i in range(self.tiles_per_player):
+                agent.hand.append(self.ids_tiles[agent.hand_ids[i]])
                 self.hand_sizes.append(len(agent.hand))
-        for agent in self.agents:
-            tmp = []
-            for i in range(self.tiles_per_player):
-                tmp.append(self.tiles_ids[tuple(agent.hand[i])])
-            tmp.sort()
-            for i in range(self.tiles_per_player):
-                agent.hand[i] = self.ids_tiles[tmp[i]]
         self.table = []
         first_tile = (-1, -1)
         first_tile_pos = 0
@@ -52,7 +44,10 @@ class Environment():
                     first_tile = self.agents[i].hand[j]
                     self.first_agent = i
                     first_tile_pos = j
-        self.table.append(self.agents[self.first_agent].hand.pop(first_tile_pos))
+        self.table.append(self.agents[self.first_agent].hand[first_tile_pos])
+        self.agents[self.first_agent].hand[first_tile_pos] = (-2, -2)
+        self.agents[self.first_agent].hand_ids[first_tile_pos] = -1
+        
         result = TimestepResult(
             observation=self.get_observation(0),
             reward=0,
@@ -91,21 +86,22 @@ class Environment():
     def get_winner_zero(self):
         winner = -1
         for i in range(len(self.agents)):
-            if len(self.agents[i].hand) == 0:
+            if self.hand_sizes[i] == 0:
                 winner = i
         if winner != -1:
             self.is_game_over = True
         return winner
 
     def get_winner(self):
+        print("overtime")
         self.is_game_over = True
         winner = -1
         min_ = self.tiles_per_player
         for i in range(len(self.agents)):
-            if len(self.agents[i].hand) < min_:
-                min_ = len(self.agents[i].hand)
+            if self.hand_sizes[i] < min_:
+                min_ = self.hand_sizes[i]
                 winner = i
-            elif len(self.agents[i].hand) == min_:
+            elif self.hand_sizes[i] == min_:
                 winner = -1
                 break
         return winner
@@ -169,8 +165,7 @@ class Environment():
         if self.current_action != [(-1, -1), -1]:
             self.turns_passed = 0
             self.hand_sizes[agent_id] -= 1
-            for i in range(self.tiles_per_player):
-                print("hi")
+            for i in range(len(self.agents[agent_id].hand)):
                 if self.current_action[0] == self.agents[agent_id].hand[i]:
                     self.agents[agent_id].hand[i] = (-2, -2)
                     self.agents[agent_id].hand_ids[i] = -1
@@ -181,6 +176,8 @@ class Environment():
             reward += 5
         else:
             self.turns_passed += 1
+            print("ay, me pasé")
+        
 
         reward += self.tiles_per_player - len(self.agents[agent_id].hand)
 
@@ -189,11 +186,16 @@ class Environment():
                 if self.agents[agent_id].last_pos_played == -1:
                     reward += 15
         
-        if self.get_winner_zero() == agent_id:
+        winner = self.get_winner_zero()
+        if winner == agent_id:
             reward += 1000
 
-        if self.turns_passed == len(self.agents):
-            if self.get_winner() == agent_id:
+        winner = -1
+        print(f"ay me he pasao {self.turns_passed}")
+        if self.turns_passed >= len(self.agents):
+            print("khe")
+            winner = self.get_winner()
+            if winner == agent_id:
                 reward += 800
 
         result = TimestepResult(

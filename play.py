@@ -2,6 +2,7 @@ import json
 import sys
 import numpy as np
 import platform
+import os
 
 from environment import *
 from agents import *
@@ -15,15 +16,21 @@ def play(env, agents, num_episodes=1, verbose=True):
 
     for episode in range(num_episodes):
 
-        timestep = env.new_episode()
         stats = np.zeros(len(agents))
         game_over = False
         step = 0
+        timestep = env.new_episode()
 
-        for i in range(env.first_agent, len(agents)):
+        for i in range(env.first_agent + 1, len(agents)):
+        	if verbose:
+        		print("-------------------------------")
+        		print(f"Player {i} hand: {agents[i].hand}")
+        		print(f"Table {env.table}")
+        	actions = agents[i].act(timestep.observation, timestep.reward)
+        	action = env.choose_action(actions, i)
+        	if verbose:
+        		print(f"Player {i} played {action}")
         	timestep = env.timestep(i)
-        	action = agents[i].act(timestep.observation, timestep.reward)
-        	env.choose_action(action, i)
         	game_over = env.is_game_over
         step += 1
         while not game_over:
@@ -53,9 +60,9 @@ def play(env, agents, num_episodes=1, verbose=True):
 
 
 if platform.system() == "Windows":
-	print("cls")
+	os.system("cls")
 else:
-	print("clear")
+	os.system("clear")
 
 agents = []
 agents.append(RandomAgent())
