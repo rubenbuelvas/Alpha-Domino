@@ -78,7 +78,7 @@ else:
     os.system("clear")
 
 agents = []
-agents.append(DeepQNetworkAgent(model=load_model("dqn-final.model")))
+agents.append(DeepQNetworkAgent(model=load_model("dqn_model.model"), num_actions=42))
 agents.append(RandomAgent())
 agents.append(RandomAgent())
 agents.append(RandomAgent())

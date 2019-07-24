@@ -80,7 +80,7 @@ class Environment():
                 observation.append(self.tiles_ids[tuple(self.table[i])])
             else:
                 observation.append(-1)
-        return observation
+        return np.array(observation)
 
     def observation_shape(self, agent_id):
         return 42
