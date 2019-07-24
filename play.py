@@ -23,33 +23,32 @@ def play(env, agents, num_episodes=1, verbose=True):
         for i in range(env.first_agent, len(agents)):
         	timestep = env.timestep(i)
         	action = agents[i].act(timestep.observation, timestep.reward)
-        	env.choose_action(action)
+        	env.choose_action(action, i)
         	game_over = env.is_game_over
         step += 1
         while not game_over:
 
-        	for i in range(first_agent, len(agents)):
+        	for i in range(env.first_agent, len(agents)):
         		if verbose:
         			print("-------------------------------")
         			print(f"Player {i} hand: {agents[i].hand}")
-        		actions = agent.act(timestep.observation, timestep.reward)
-        		action = env.choose_action(actions)
+        		actions = agents[i].act(timestep.observation, timestep.reward)
+        		action = env.choose_action(actions, i)
         		if verbose:
         			print(f"Player {i} played {action}")
-        		timestep = env.timestep()
+        		timestep = env.timestep(i)
         		game_over = env.is_game_over
         	step += 1
            
         winner = env.get_winner()
 
         stats[winner] += 1
-
+        print()
         print(f"******* Episode {episode+1} / {num_episodes} | Timesteps {step} | Player {winner} won")
-        print(summary.format(episode + 1, num_episodes, env.stats.timesteps_survived, env.stats.fruits_eaten))
 
     print()
     print("Results:")
-    print(f"Player 0: {stats[0]} | Player 1: {stats[1]} | Player 2: {stats[2]} | Player 3: {stats[3]}")
+    print(f"Player 0: {int(stats[0])} | Player 1: {int(stats[1])} | Player 2: {int(stats[2])} | Player 3: {int(stats[3])}")
 
 
 if platform.system() == "Windows":

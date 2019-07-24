@@ -1,59 +1,31 @@
 import numpy as np
+import random
 
 class RandomAgent():
 
-	def __init__(self):
-		self.hand = []
-		self.last_tile_played = []
-		self.last_pos_played = -1
+    def __init__(self, tiles_per_player=28):
+        self.tiles_per_player = tiles_per_player
+        self.hand = []
+        self.hand_ids = []
+        self.last_tile_played = [-1, -1]
+        self.last_pos_played = -1
 
-	def act(self, observation, reward):
-		play = []
-		for i in range(10):
-			pos = random.randrange(len(self.hand))
-			tile = self.hand[pos]
-			play = playable_tile(observation[0], tile)
-			if play != []:
-				self.hand.pop(pos)
-				break
-		else:
-			play = []
-
-		if play == []:
-			last_tile_played = -1
-			last_pos_played = -1
-		else:	
-			last_tile_played = play[0]
-			last_pos_played = play[1]
-		return play
-
+    def act(self, observation, reward):
+        actions = np.zeros(self.tiles_per_player+1)
+        for i in range(len(actions)):
+            if i in self.hand_ids:
+                actions[i] = random.uniform(0, 1)
+        print(actions)
+        print(self.hand_ids)
+        return actions
 
 class HumanAgent():
 
     def __init__(self):
         self.hand = []
-        self.last_tile_played = []
-        self.last_pos_played = -1
 
-    def act(self, observation):
-        play = []
-        for i in range(10):
-            pos = random.randrange(len(self.hand))
-            tile = self.hand[pos]
-            play = playable_tile(observation[0], tile)
-            if play != []:
-                self.hand.pop(pos)
-                break
-        else:
-            play = []
-
-        if play == []:
-            last_tile_played = -1
-            last_pos_played = -1
-        else:   
-            last_tile_played = play[0]
-            last_pos_played = play[1]
-        return play
+    def act():
+        pass
 
 
 class DeepQNetworkAgent():
