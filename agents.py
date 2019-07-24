@@ -1,7 +1,7 @@
 import numpy as np
 import random
 import collections
-
+import statistics 
 import json
 import sys
 
@@ -11,12 +11,12 @@ from keras.optimizers import *
 
 from environment import *
 
-class RandomAgent():
+class RandomAgent(object):
 
-    def __init__(self, ):
+    def __init__(self):
         self.hand = []
         self.hand_ids = []
-        self.last_tile_played = [-1, -1]
+        self.last_tile_played = (-1, -1)
         self.last_pos_played = -1
 
     def act(self, observation, reward):
@@ -35,120 +35,85 @@ class HumanAgent():
         pass
 
 
-class DeepQNetworkAgent():
+class DeepQNetworkAgent(object):
 
-    def __init__(self, model, num_last_frames=0, memory_size=-1):
-        """
-        Create a new DQN-based agent.
-        
-        Args:
-            model: a compiled DQN model.
-            num_last_frames (int): the number of last frames the agent will consider.
-            memory_size (int): memory size limit for experience replay (-1 for unlimited). 
-        """
-        assert len(model.output_shape) == 2, 'Model output shape should be (num_samples, num_actions)'
+    def __init__(self, model, num_actions, epsilon=1.8, batch_size=32, input_dims=48, alpha=0.0085, gamma=0.99, epsilon_dec=0.99, epsilon_end=0.01, memory_size=1000000, f_name="dqn_model.model"):
+        self.action_space = [i for i in range(num_actions)]
+        self.num_actions = num_actions
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.epsilon_dec = epsilon_dec
+        self.epsilon_end = epsilon_end
+        self.batch_size = batch_size
+        self.model_file = f_name
+
+        self.memory = ReplayBuffer(memory_size, input_dims, num_actions)
+        self.q_eval = model
+
         self.hand = []
         self.hand_ids = []
-        self.last_tile_played = [-1, -1]
+        self.last_tile_played = (-1, -1)
         self.last_pos_played = -1
-        self.model = model
-        self.num_last_frames = num_last_frames
-        self.memory = 0
-        #self.frames = None
 
-    def begin_episode(self):
-        """ Reset the agent for a new episode. """
-        self.frames = None
+    def remember(self, observation, action, reward, new_observation, done):
+        self.memory.store_transition(observation, action, reward, new_observation, done)
 
-    def get_last_frames(self, observation):
-        """
-        Get the pixels of the last `num_last_frames` observations, the current frame being the last.
-        
-        Args:
-            observation: observation at the current timestep. 
+    def learn(self):
+        if self.memory.mem_cntr < self.batch_size:
+            return
+        observation, action, reward, new_observation, done = self.memory.sample_buffer(self.batch_size)
 
-        Returns:
-            Observations for the last `num_last_frames` frames.
-        """
-        frame = observation
-        if self.frames is None:
-            self.frames = collections.deque([frame] * self.num_last_frames)
-        else:
-            self.frames.append(frame)
-            self.frames.popleft()
-        return none
-        #return np.expand_dims(self.frames, 0)
+        action_values = np.array(self.action_space, dtype=np.int32)
+        action_indices = np.dot(action, action_values)
 
-    def train(self, env, num_episodes=1000, batch_size=50, discount_factor=0.9, checkpoint_freq=None,
-              exploration_range=(1.0, 0.1), exploration_phase_size=0.5):
-        """
-        Train the agent to perform well in the given Snake environment.
-        
-        Args:
-            env:
-                an instance of Snake environment.
-            num_episodes (int):
-                the number of episodes to run during the training.
-            batch_size (int):
-                the size of the learning sample for experience replay.
-            discount_factor (float):
-                discount factor (gamma) for computing the value function.
-            checkpoint_freq (int):
-                the number of episodes after which a new model checkpoint will be created.
-            exploration_range (tuple):
-                a (max, min) range specifying how the exploration rate should decay over time. 
-            exploration_phase_size (float):
-                the percentage of the training process at which
-                the exploration rate should reach its minimum.
-        """
+        q_eval = self.q_eval.predict((observation))
+        q_next = self.q_eval.predict((np.array(new_observation)))
 
-        # Calculate the constant exploration decay speed for each episode.
-        max_exploration_rate, min_exploration_rate = exploration_range
-        exploration_decay = ((max_exploration_rate - min_exploration_rate) / (num_episodes * exploration_phase_size))
-        exploration_rate = max_exploration_rate
+        q_target = q_eval.copy()
 
+        batch_index = np.arange(self.batch_size, dtype=np.int32)
+
+        q_target[batch_index, action_indices] = reward + self.gamma*np.max(q_next, axis=1)*done
+
+        t = self.q_eval.fit(observation, q_target, verbose=0)
+        self.epsilon = self.epsilon*self.epsilon_dec if self.epsilon > self.epsilon_end else self.epsilon_end 
+
+    def train(self, env, num_episodes=3000):
+        scores = []
+        try:
+            self.q_eval.load_model(self.model_file)
+        except:
+            pass
         for episode in range(num_episodes):
-            # Reset the environment for the new episode.
-            self.timestep = env.new_episode()
-            self.begin_episode()
+            env.new_episode()
             game_over = False
             loss = 0.0
-
-            # Observe the initial state.
-            state = self.timestep.observation
-
-
             stats = np.zeros(len(env.agents))
             game_over = False
             step = 0
+            score = 0
             timestep = env.new_episode()
+            observation = timestep.observation
 
             for i in range(env.first_agent + 1, len(env.agents)):
                 if i == 0:
-                    if np.random.random() < exploration_rate:
-                        # Explore: take a random action.
+                    if np.random.random() < self.epsilon:
                         actions = np.zeros(29)
                         for i in range(len(actions)):
                             if i in self.hand_ids:
                                 actions[i] = random.uniform(0.5, 1)
-                        action = actions
                     else:
-                        # Exploit: take the best known action for this state.
-                        q = self.model.predict(state)
-                        action = q[0]
+                        q = self.q_eval.predict(observation)
+                        actions = q[0]
 
-                    # Act on the environment.
-                    env.choose_action(action, 0)
-                    timestep = env.timestep(0)
-
-                    # Remember a new piece of experience.
+                    observation_ = timestep.observation
                     reward = timestep.reward
-                    state_next = self.timestep.observation
-                    game_over = timestep.is_episode_end
-                    experience_item = [state, action, reward, state_next, game_over]
-                    #arn on the
+                    score += reward
+                    self.remember(observation, env.tiles_ids[env.current_action[0]], reward, observation_, env.is_game_over)
+                    timestep = env.timestep(0)
+                    observation = observation_
+                    self.learn()
                 else:
-
                     actions = env.agents[i].act(timestep.observation, timestep.reward)
                     action = env.choose_action(actions, i)
 
@@ -161,61 +126,84 @@ class DeepQNetworkAgent():
 
                 for i in range(len(env.agents)):
                     if i == 0:
-                        if np.random.random() < exploration_rate:
-                            # Explore: take a random action.
+                        if np.random.random() < self.epsilon:
                             actions = np.zeros(29)
                             for i in range(len(actions)):
                                 if i in self.hand_ids:
                                     actions[i] = random.uniform(0.5, 1)
-                            action = actions
                         else:
-                            # Exploit: take the best known action for this state.
-                            q = self.model.predict(state)
-                            action = q[0]
+                            q = self.q_eval.predict(observation)
+                            actions = q[0]
 
-                        # Act on the environment.
-                        env.choose_action(action, 0)
-                        timestep = env.timestep(0)
+                    observation_ = timestep.observation
+                    reward = timestep.reward
+                    score += reward
+                    self.remember(observation, env.tiles_ids[env.current_action[0]], reward, observation_, env.is_game_over)
+                    timestep = env.timestep(0)
+                    observation = observation_
+                    self.learn()
+                else:
+                    actions = env.agents[i].act(timestep.observation, timestep.reward)
+                    action = env.choose_action(actions, i)
 
-                        # Remember a new piece of experience.
-                        reward = timestep.reward
-                        state_next = self.timestep.observation
-                        game_over = timestep.is_game_over
-                        experience_item = [state, action, reward, state_next, game_over]
-                        #self.memory.remember(*experience_item)
-                        state = state_next
+                    timestep = env.timestep(i)
+                    game_over = env.is_game_over
+                    if game_over:
+                        break
 
-                        # Sample a random batch from experience.
-                        
-                        #
-                    else:
+            scores.append(score)
 
-                        actions = env.agents[i].act(timestep.observation, timestep.reward)
-                        action = env.choose_action(actions, i)
 
-                        timestep = env.timestep(i)
-                        game_over = env.is_game_over
-                        if game_over:
-                            break
+            if episode % 100 == 0:
+                print()
+                print(f"Episode {episode} / {num_episodes} | Reward = {statistics.mean(scores)}")
+                self.q_eval.save(self.model_file)
+                scores = []
 
-            if checkpoint_freq and (episode % checkpoint_freq) == 0:
-                self.model.save(f'dqn-{episode:08d}.model')
 
-            if exploration_rate > min_exploration_rate:
-                exploration_rate -= exploration_decay
-            """
-            summary = 'Episode {:5d}/{:5d} | Loss {:8.4f} | Exploration {:.2f} | ' + \
-                      'Timesteps {:4d} | Total Reward {:4d}'
-            print(summary.format(
-                episode + 1, num_episodes, loss, exploration_rate, env.stats.timesteps, env.stats.sum_episode_rewards,
-            ))
-            """
-
-        self.model.save('dqn-final.model')
 
     def act(self, observation, reward):
-        state = observation
-        q = self.model.predict(state)[0]
-        return q
+        observation = observation[np.newaxis, :]
+        if np.random.random() < self.epsilon:
+            actions = np.zeros(29)
+            for i in range(len(actions)):
+                if i in self.hand_ids:
+                    actions[i] = random.uniform(0.5, 1)
+        else:
+            actions = self.q_eval.predict(observation)
+        return actions
 
 
+
+class ReplayBuffer(object):
+    def __init__(self, max_size, input_shape, num_actions):
+        self.mem_cntr = 0
+        self.memory_size = max_size
+        self.observation_memory = np.zeros((self.memory_size, input_shape))
+        self.new_observation_memory = np.zeros((self.memory_size, input_shape))
+        dtype = np.int32
+        self.action_memory = np.zeros((self.memory_size, num_actions), dtype=dtype)
+        self.reward_memory = np.zeros((self.memory_size, num_actions))
+        self.terminal_memory = np.zeros((self.memory_size), dtype=np.float32)
+        
+    def store_transition(self, observation, action, reward, observation_, done):
+        index = self.mem_cntr % self.memory_size
+        self.observation_memory[index] = observation
+        self.new_observation_memory = observation_
+        self.reward_memory[index] = reward
+        self.terminal_memory[index] = 1 - int(done)
+        actions = np.zeros(self.action_memory.shape[1])
+        actions[action] = 1.0
+        self.action_memory[index] = action
+        self.mem_cntr += 1
+
+    def sample_buffer(self, batch_size):
+        max_mem = min(self.mem_cntr, self.memory_size)
+        batch = np.random.choice(max_mem, batch_size)
+        observations = self.observation_memory[batch]
+        observations_ = np.array(self.new_observation_memory)[batch]
+        rewards = self.reward_memory[batch]
+        actions = self.action_memory[batch]
+        terminal = self.terminal_memory[batch]
+
+        return observations, actions, rewards, observations_, terminal

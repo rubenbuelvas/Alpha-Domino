@@ -13,16 +13,16 @@ def load_model(filename):
     return load_model(filename)
 
 
-def play(env, agents, num_episodes=1, verbose=True):
+def play(env, agents, num_episodes=500, verbose=False):
 
     winner = -1
 
     print()
     print('Playing:')
-
+    stats = np.zeros(len(agents))
     for episode in range(num_episodes):
 
-        stats = np.zeros(len(agents))
+        
         game_over = False
         step = 0
         timestep = env.new_episode()
