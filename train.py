@@ -45,4 +45,4 @@ env = Environment(agents)
 model = create_dqn_model(env, 0.001, env.observation_shape(0), 48)
 
 env.agents[0] = DeepQNetworkAgent(model, num_actions=env.observation_shape(0))
-env.agents[0].train(env, num_episodes=1000)
+env.agents[0].train(env, num_episodes=10000)
