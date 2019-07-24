@@ -16,6 +16,7 @@ class Environment():
         self.ids_tiles = {-1: (-2, -2), 0: (-1, -1)}
         self.pile = self.generate_tiles()
         self.is_game_over = False
+        self.winner = -1
         self.first_agent = -1
         self.turns_passed = 0
         self.current_action = [(-1, -1), -1]
@@ -24,6 +25,7 @@ class Environment():
 
     def new_episode(self):
         self.is_game_over = False
+        self.hand_sizes = []
         for agent in self.agents:
             agent.hand = []
             agent.hand_ids = []
@@ -34,7 +36,7 @@ class Environment():
             agent.hand_ids.sort()
             for i in range(self.tiles_per_player):
                 agent.hand.append(self.ids_tiles[agent.hand_ids[i]])
-                self.hand_sizes.append(len(agent.hand))
+            self.hand_sizes.append(self.tiles_per_player)
         self.table = []
         first_tile = (-1, -1)
         first_tile_pos = 0
@@ -47,7 +49,7 @@ class Environment():
         self.table.append(self.agents[self.first_agent].hand[first_tile_pos])
         self.agents[self.first_agent].hand[first_tile_pos] = (-2, -2)
         self.agents[self.first_agent].hand_ids[first_tile_pos] = -1
-        
+        self.hand_sizes[self.first_agent] -= 1
         result = TimestepResult(
             observation=self.get_observation(0),
             reward=0,
@@ -88,15 +90,16 @@ class Environment():
         for i in range(len(self.agents)):
             if self.hand_sizes[i] == 0:
                 winner = i
+                self.is_game_over = True
         if winner != -1:
             self.is_game_over = True
+        self.winner = winner
         return winner
 
     def get_winner(self):
-        print("overtime")
         self.is_game_over = True
         winner = -1
-        min_ = self.tiles_per_player
+        min_ = self.tiles_per_player + 1
         for i in range(len(self.agents)):
             if self.hand_sizes[i] < min_:
                 min_ = self.hand_sizes[i]
@@ -104,11 +107,12 @@ class Environment():
             elif self.hand_sizes[i] == min_:
                 winner = -1
                 break
+        self.winner = winner
         return winner
 
     def turn_tile(self, tile):
         new_tile = [copy.copy(tile[1]), copy.copy(tile[0])]
-        return new_tile
+        return tuple(new_tile)
 
     def generate_tiles(self, max_value=6):
         tiles = []
@@ -144,10 +148,8 @@ class Environment():
         current_action = [(-1, -1), -1]
         for i in range(len(actions)):
             tile_id = np.argmax(np.array(actions))
-            print(tile_id)
             actions = list(actions)
             tile = self.ids_tiles[tile_id]
-            print(tile)
             play = self.get_play(tile)
             if play != [(-1, -1), -1] and tile in self.agents[agent_id].hand:
                 current_action = play
@@ -168,9 +170,10 @@ class Environment():
         if self.current_action != [(-1, -1), -1]:
             self.turns_passed = 0
             self.hand_sizes[agent_id] -= 1
-            for i in range(len(self.agents[agent_id].hand)):
-                if self.current_action[0] == self.agents[agent_id].hand[i]:
+            for i in range(self.tiles_per_player):
+                if self.current_action[0] == self.agents[agent_id].hand[i] or self.turn_tile(self.current_action[0]) == self.agents[agent_id].hand[i]:
                     self.agents[agent_id].hand[i] = (-2, -2)
+                if self.tiles_ids[self.current_action[0]] == self.agents[agent_id].hand_ids[i]:
                     self.agents[agent_id].hand_ids[i] = -1
             if self.current_action[1] == 0:
                 self.table.insert(0, self.current_action[0])
@@ -179,8 +182,6 @@ class Environment():
             reward += 5
         else:
             self.turns_passed += 1
-            print("ay, me pasé")
-        
 
         reward += self.tiles_per_player - len(self.agents[agent_id].hand)
 
@@ -193,10 +194,7 @@ class Environment():
         if winner == agent_id:
             reward += 1000
 
-        winner = -1
-        print(f"ay me he pasao {self.turns_passed}")
-        if self.turns_passed >= len(self.agents):
-            print("khe")
+        if self.turns_passed >= 4:
             winner = self.get_winner()
             if winner == agent_id:
                 reward += 800
