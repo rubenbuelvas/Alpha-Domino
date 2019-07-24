@@ -82,8 +82,8 @@ class Environment():
                 observation.append(-1)
         return observation
 
-    def observation_shape(self):
-        return len(self.get_observation())
+    def observation_shape(self, agent_id):
+        return 42
 
     def get_winner_zero(self):
         winner = -1

@@ -72,7 +72,7 @@ else:
     os.system("clear")
 
 agents = []
-agents.append(RandomAgent())
+agents.append(DeepQNetworkAgent())
 agents.append(RandomAgent())
 agents.append(RandomAgent())
 agents.append(RandomAgent())
