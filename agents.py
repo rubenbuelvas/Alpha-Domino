@@ -15,8 +15,8 @@ class RandomAgent():
         for i in range(len(actions)):
             if i in self.hand_ids:
                 actions[i] = random.uniform(0, 1)
-        print(actions)
-        print(self.hand_ids)
+        #print(actions)
+        #print(self.hand_ids)
         return actions
 
 class HumanAgent():

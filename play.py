@@ -28,10 +28,11 @@ def play(env, agents, num_episodes=1, verbose=True):
         step += 1
         while not game_over:
 
-        	for i in range(env.first_agent, len(agents)):
+        	for i in range(len(agents)):
         		if verbose:
         			print("-------------------------------")
         			print(f"Player {i} hand: {agents[i].hand}")
+        			print(f"Table {env.table}")
         		actions = agents[i].act(timestep.observation, timestep.reward)
         		action = env.choose_action(actions, i)
         		if verbose:
