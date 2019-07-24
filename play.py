@@ -37,6 +37,8 @@ def play(env, agents, num_episodes=1, verbose=True):
 					print(f"Player {i} hand: {agents[i].hand}")
 				actions = agent.act(timestep.observation, timestep.reward)
             	action = env.choose_action(actions)
+            	if verbose:
+            		print(f"Player {i} played {action}")
             	timestep = env.timestep()
             	game_over = env.is_game_over
             step += 1

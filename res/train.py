@@ -9,9 +9,8 @@ from keras.models import Sequential
 from keras.layers import *
 from keras.optimizers import *
 
-from snakeai.agent import DeepQNetworkAgent
-from snakeai.gameplay.environment import Environment
-from snakeai.utils.cli import HelpOnFailArgumentParser
+from agent import *
+from environment import *
 
 
 def parse_command_line_args(args):
@@ -91,7 +90,7 @@ def create_dqn_model(env, num_last_frames):
     return model
 
 
-def main():
+def train(env, num_episodes=3000):
     parsed_args = parse_command_line_args(sys.argv[1:])
 
     env = create_snake_environment(parsed_args.level)

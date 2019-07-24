@@ -16,6 +16,7 @@ class Environment():
 		self.is_game_over = False
 		self.first_agent = -1
 		self.turns_passed = 0
+		self.current_action = []
 		for agent in agents:
 			for i in range(tiles_per_player):
 				agent.hand.append(self.pile.pop())
@@ -66,6 +67,9 @@ class Environment():
 			if agent_id != i:
 				observation.append(tiles_ids[tuple(self.agents[i].last_tile_played)])
 				observation.append(str(self.agents[i].last_pos_played))
+		observation.append(len(self.table))
+		observation.append(tiles_ids[tuple(self.table[0])])
+		observation.append(tiles_ids[tuple(self.table[-1])])
 		for i in range(28):
 			if i < len(self.table):
 				observation.append(tiles_ids[tuple(self.table[i])])
@@ -118,28 +122,39 @@ class Environment():
 		new_tile = [copy.copy(tile[1]), copy.copy(tile[0])]
 		return new_tile
 
-	def playable_tile(self, tile):
-		playable = []
+	def get_play(self, tile):
+		if tile == [-1, -1]:
+			return [[-1, -1], -1]
+		play = []
 		t_left = self.table[0]
 		t_right = self.table[-1]
 		if t_left[0] == tile[1]:
-			playable = [tile, 0]
+			play = [tile, 0]
 		elif t_left[0] == tile[0]:
-			playable = [turn_tile(tile), 0]
+			play = [turn_tile(tile), 0]
 		elif t_right[1] == tile[1]: 
-			playable = [turn_tile(tile), 1]
+			play = [turn_tile(tile), 1]
 		elif t_right[1] == tile[0]:
-			playable = [tile, 1]
-		return playable
+			play = [tile, 1]
+		return play
 
-	def choose_action(self, action, agent_id):
-		self.current_action = action
-        for i in action
+	def choose_action(self, actions, agent_id):
+		current_action = [[-1, -1], -1]
+		for i in range(len(actions)):
+			action = np.argmax(np.array(actions))
+			if get_play(self.ids_tiles[action]) != []:
+				current_action = self.ids_tiles[action]
+				break
+		self.current_action = current_action
+		return current_action
+        
 
 	def timestep(self, agent_id):
 
         self.timestep_index += 1
         reward = 0
+
+
 
         if self.snake.peek_next_move() == self.fruit:
             self.snake.grow()
