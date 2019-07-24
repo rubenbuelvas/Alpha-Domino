@@ -76,7 +76,7 @@ class Environment():
 	def observation_shape(self):
 		return len(self.get_observation())
 
-	def get_winner(self):
+	def get_winner_zero(self):
 		winner = -1
 		for i in range(len(agents)):
 			if len(agents[i].hand) == 0:
@@ -85,7 +85,7 @@ class Environment():
 			self.is_game_over = True
 		return winner
 
-	def get_winner_overtime(self):
+	def get_winner(self):
 		winner = -1
 		min_ = self.tiles_per_player
 		for i in range(len(agents)):
@@ -114,11 +114,9 @@ class Environment():
 		random.shuffle(tiles)
 		return tiles
 
-
 	def turn_tile(self, tile):
 		new_tile = [copy.copy(tile[1]), copy.copy(tile[0])]
 		return new_tile
-
 
 	def playable_tile(self, tile):
 		playable = []

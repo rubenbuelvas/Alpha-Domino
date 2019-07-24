@@ -6,70 +6,7 @@ import platform
 from environment import *
 from agents import *
 
-def play(agents, env, verbose=False):
-	winner = env.get_winner()
-	turn = 0
-	passed_count = 0
-	first_tile = [-1, -1]
-	first_agent = 0
-	first_tile_pos = 0
-	turn += 1
-	for i in range(first_agent, len(agents)):
-		print("-------------------------------")
-		print(f"Table: {env.table}")
-		print(f"Player {i} hand: {agents[i].hand}")
-		played_tile = agents[i].act(env.get_observation())
-		if len(played_tile) > 0:
-			print(f"Player {i} played {played_tile}")
-			if(played_tile[1] == 0):
-				env.table.insert(0, played_tile[0])
-			elif(played_tile[1] == 1):
-				env.table.append(played_tile[0])
-			else:
-				print("Something went wrong")
-		else:
-			passed_count += 1
-			print(f"Player {i} passed")
-		winner = env.get_winner()
-		if winner != -1:
-			break
-	while(winner == -1):
-		print(env.get_observation_nn(0))
-		if winner != -1:
-			break
-		turn += 1
-		if passed_count == len(agents):
-			winner = env.get_winner_2()
-			break
-		passed_count = 0
-		for i in range(len(agents)):
-			print("-------------------------------")
-			print(f"Table: {env.table}")
-			print(f"Player {i} hand: {agents[i].hand}")
-			played_tile = agents[i].act(env.get_observation())
-			if len(played_tile) > 0:
-				print(f"Player {i} played {played_tile}")
-				if(played_tile[1] == 0):
-					env.table.insert(0, played_tile[0])
-				elif(played_tile[1] == 1):
-					env.table.append(played_tile[0])
-				else:
-					print("Something went wrong")
-			else:
-				passed_count += 1
-				print(f"Player {i} passed")
-			winner = env.get_winner()
-			if winner != -1:
-				break
-	if winner == -1:
-		print()
-		print("Tie!")
-	else:
-		print()
-		print(f"Player {winner} won!")
-
-
-def play(env, agent, num_episodes=1, verbose=True):
+def play(env, agents, num_episodes=1, verbose=True):
 
     winner = -1
 
@@ -80,31 +17,16 @@ def play(env, agent, num_episodes=1, verbose=True):
 
         timestep = env.new_episode()
         agent.begin_episode()
+        stats = np.zeros(len(agents))
         game_over = False
         step = 0
 
         for i in range(first_agent, len(agents)):
-        	if verbose:
-				print("-------------------------------")
-				print(f"Table: {env.table}")
-				print(f"Player {i} hand: {agents[i].hand}")
-			played_tile = agents[i].act(env.get_observation())
-			if len(played_tile) > 0:
-				if verbose:
-					print(f"Player {i} played {played_tile}")
-				if(played_tile[1] == 0):
-					env.table.insert(0, played_tile[0])
-				elif(played_tile[1] == 1):
-					env.table.append(played_tile[0])
-				else:
-					if verbose:
-						print("Something went wrong")
-			else:
-				if verbose:
-					print(f"Player {i} passed")
-			winner = env.get_winner()
-			if winner != -1:
-				break
+        	timestep = env.timestep(i)
+        	action = agents[i].act(timestep.observation, timestep.reward)
+            env.choose_action(action)
+            game_over = env.is_game_over
+
 		step += 1
         while not game_over:
 
@@ -113,42 +35,26 @@ def play(env, agent, num_episodes=1, verbose=True):
 					print("-------------------------------")
 					print(f"Table: {env.table}")
 					print(f"Player {i} hand: {agents[i].hand}")
-				action = agent.act(timestep.observation, timestep.reward)
-            	env.choose_action(action)
+				actions = agent.act(timestep.observation, timestep.reward)
+            	action = env.choose_action(actions)
             	timestep = env.timestep()
-            	game_over = timestep.is_episode_end
-
-
-				played_tile = agents[i].act(env.get_observation())
-				if len(played_tile) > 0:
-					if verbose:
-						print(f"Player {i} played {played_tile}")
-					if(played_tile[1] == 0):
-						env.table.insert(0, played_tile[0])
-					elif(played_tile[1] == 1):
-						env.table.append(played_tile[0])
-					else:
-						if verbose:
-							print("Something went wrong")
-				else:
-					if verbose:
-						print(f"Player {i} passed")
-				winner = env.get_winner()
-				if winner != -1:
-					break
+            	game_over = env.is_game_over
             step += 1
-            
+           
+        winner = env.get_winner()
 
-        fruit_stats.append(env.stats.fruits_eaten)
+        stats[winner] += 1
 
-        summary = '******* Episode {:3d} / {:3d} | Timesteps {:4d} | Fruits {:2d}'
+        print(f"******* Episode {episode+1} / {num_episodes} | Timesteps {step} | Player {winner} won")
         print(summary.format(episode + 1, num_episodes, env.stats.timesteps_survived, env.stats.fruits_eaten))
 
     print()
-    print(f"Player {winner} won!")
+    print("Results:")
+    print(f"Player 0: {stats[0]} | Player 1: {stats[1]} | Player 2: {stats[2]} | Player 3: {stats[3]}")
 
 
 if platform.system() == "Windows":
 	print("cls")
 else:
 	print("clear")
+
