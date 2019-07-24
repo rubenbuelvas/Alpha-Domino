@@ -82,7 +82,7 @@ def create_dqn_model(env, num_last_frames):
     model.add(Flatten())
     model.add(Dense(256))
     model.add(Activation('relu'))
-    model.add(Dense(env.num_actions))
+    model.add(Dense(29))
 
     model.summary()
     model.compile(RMSprop(), 'MSE')

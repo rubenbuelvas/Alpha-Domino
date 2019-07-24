@@ -3,19 +3,17 @@ import random
 
 class RandomAgent():
 
-    def __init__(self, tiles_per_player=28):
-        self.tiles_per_player = tiles_per_player
+    def __init__(self, ):
         self.hand = []
         self.hand_ids = []
         self.last_tile_played = [-1, -1]
         self.last_pos_played = -1
 
     def act(self, observation, reward):
-        actions = np.zeros(self.tiles_per_player+1)
+        actions = np.zeros(29)
         for i in range(len(actions)):
             if i in self.hand_ids:
-                actions[i] = random.uniform(0, 1)
-        print(f"sjdgfkjsadflkjasdkflj{self.hand_ids}")
+                actions[i] = random.uniform(0.5, 1)
         return actions
 
 class HumanAgent():

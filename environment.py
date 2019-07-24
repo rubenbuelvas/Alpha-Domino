@@ -144,13 +144,16 @@ class Environment():
         current_action = [(-1, -1), -1]
         for i in range(len(actions)):
             tile_id = np.argmax(np.array(actions))
+            print(tile_id)
             actions = list(actions)
-            actions.pop(np.argmax(np.array(actions)))
             tile = self.ids_tiles[tile_id]
+            print(tile)
             play = self.get_play(tile)
             if play != [(-1, -1), -1] and tile in self.agents[agent_id].hand:
                 current_action = play
                 break
+            actions[tile_id] = 0
+
 
         self.current_action = current_action
         self.agents[agent_id].last_tile_played = copy.deepcopy(current_action[0])
