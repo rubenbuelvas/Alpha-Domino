@@ -16,32 +16,29 @@ def play(env, agents, num_episodes=1, verbose=True):
     for episode in range(num_episodes):
 
         timestep = env.new_episode()
-        agent.begin_episode()
         stats = np.zeros(len(agents))
         game_over = False
         step = 0
 
-        for i in range(first_agent, len(agents)):
+        for i in range(env.first_agent, len(agents)):
         	timestep = env.timestep(i)
         	action = agents[i].act(timestep.observation, timestep.reward)
-            env.choose_action(action)
-            game_over = env.is_game_over
-
-		step += 1
+        	env.choose_action(action)
+        	game_over = env.is_game_over
+        step += 1
         while not game_over:
 
         	for i in range(first_agent, len(agents)):
-	        	if verbose:
-					print("-------------------------------")
-					print(f"Table: {env.table}")
-					print(f"Player {i} hand: {agents[i].hand}")
-				actions = agent.act(timestep.observation, timestep.reward)
-            	action = env.choose_action(actions)
-            	if verbose:
-            		print(f"Player {i} played {action}")
-            	timestep = env.timestep()
-            	game_over = env.is_game_over
-            step += 1
+        		if verbose:
+        			print("-------------------------------")
+        			print(f"Player {i} hand: {agents[i].hand}")
+        		actions = agent.act(timestep.observation, timestep.reward)
+        		action = env.choose_action(actions)
+        		if verbose:
+        			print(f"Player {i} played {action}")
+        		timestep = env.timestep()
+        		game_over = env.is_game_over
+        	step += 1
            
         winner = env.get_winner()
 
@@ -60,3 +57,9 @@ if platform.system() == "Windows":
 else:
 	print("clear")
 
+agents = []
+agents.append(RandomAgent())
+agents.append(RandomAgent())
+agents.append(RandomAgent())
+agents.append(RandomAgent())
+play(Environment(agents), agents)

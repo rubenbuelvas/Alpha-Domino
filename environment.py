@@ -1,4 +1,6 @@
 import numpy as np
+import random
+import copy
 
 from agents import *
 
@@ -10,13 +12,14 @@ class Environment():
 		self.hand_sizes = []
 		self.n_players = n_players
 		self.agents = agents
-		self.pile = generate_tiles()
-		self.tiles_ids = {[-1, -1]:0}
-		self.ids_tiles = {0: [-1, -1]}
+		self.tiles_ids = {(-1, -1): 0}
+		self.ids_tiles = {0: (-1, -1)}
+		self.pile = self.generate_tiles()
 		self.is_game_over = False
 		self.first_agent = -1
 		self.turns_passed = 0
 		self.current_action = []
+		self.timestep_index = 0
 		for agent in agents:
 			for i in range(tiles_per_player):
 				agent.hand.append(self.pile.pop())
@@ -25,18 +28,18 @@ class Environment():
 
 	def new_episode(self):
 		self.is_game_over = False
-		self.pile = generate_tiles()
-		for agent in agents:
-			for i in range(tiles_per_player):
+		self.pile = self.generate_tiles()
+		for agent in self.agents:
+			for i in range(self.tiles_per_player):
 				agent.hand.append(self.pile.pop())
 				self.hand_sizes.append(len(agent.hand))
-		for agent in agents:
+		for agent in self.agents:
 			tmp = []
-			for i in range(tiles_per_player):
-				tmp.append(tiles_ids[agent.hand[i]])
+			for i in range(self.tiles_per_player):
+				tmp.append(self.tiles_ids[tuple(agent.hand[i])])
 			tmp.sort()
-			for i in range(tiles_per_player):
-				agent.hand[i] = ids_tiles[tmp[i]]
+			for i in range(self.tiles_per_player):
+				agent.hand[i] = self.ids_tiles[tmp[i]]
 		self.table = []
 		first_tile = [-1, -1]
 		first_tile_pos = 0
@@ -46,7 +49,7 @@ class Environment():
 					first_tile = self.agents[i].hand[j]
 					self.first_agent = i
 					first_tile_pos = j
-		self.table.append(self.agents[first_agent].hand.pop(first_tile_pos))
+		self.table.append(self.agents[self.first_agent].hand.pop(first_tile_pos))
 
 	def recalculate_hand_sizes(self):
 		for i in range(self.n_players):
@@ -103,6 +106,10 @@ class Environment():
 			self.is_game_over = True
 		return winner
 
+	def turn_tile(self, tile):
+		new_tile = [copy.copy(tile[1]), copy.copy(tile[0])]
+		return new_tile
+
 	def generate_tiles(self, max_value=6):
 		tiles = []
 		a=0
@@ -110,17 +117,12 @@ class Environment():
 			for j in range(i+1):
 				my_tile = (i,j)
 				tiles.append([i, j])
-				ids_tiles[a] = my_tile
-				tiles_ids[my_tile] = a
-				tiles_ids[tuple(turn_tile(my_tile))] = a
+				self.ids_tiles[a] = my_tile
+				self.tiles_ids[my_tile] = a
+				self.tiles_ids[tuple(self.turn_tile(my_tile))] = a
 				a += 1
-		print(tiles_ids)
 		random.shuffle(tiles)
 		return tiles
-
-	def turn_tile(self, tile):
-		new_tile = [copy.copy(tile[1]), copy.copy(tile[0])]
-		return new_tile
 
 	def get_play(self, tile):
 		if tile == [-1, -1]:
@@ -150,12 +152,11 @@ class Environment():
         
 
 	def timestep(self, agent_id):
-
-        self.timestep_index += 1
-        reward = 0
-
+		self.timestep_index += 1
+		reward = 0
 
 
+		"""
         if self.snake.peek_next_move() == self.fruit:
             self.snake.grow()
             self.generate_fruit()
@@ -190,6 +191,7 @@ class Environment():
 
         self.record_timestep_stats(result)
         return result
+        """
 
 
 def play(agents, env, verbose=False):
